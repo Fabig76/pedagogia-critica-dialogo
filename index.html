@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa mental — Pedagogía Crítica y del Diálogo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBF9F3;
+    --ink:#26323F;
+    --c1:#E4572E; /* Pedagogía Crítica */
+    --c2:#DB9A0F; /* Paulo Freire */
+    --c3:#2E933C; /* Pedagogía del Diálogo */
+    --c4:#1B6CA8; /* Principios */
+    --c5:#7A3FBF; /* Importancia */
+    --c6:#D81E5B; /* Tertulias */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Nunito',system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    overflow:hidden;
+  }
+  /* ---------- Barra superior (estilo herramienta web) ---------- */
+  header{
+    position:fixed;inset:0 0 auto 0;height:56px;z-index:50;
+    display:flex;align-items:center;gap:14px;padding:0 16px;
+    background:rgba(251,249,243,.92);backdrop-filter:blur(6px);
+    border-bottom:1.5px solid #E6E0D2;
+  }
+  .logo{
+    width:34px;height:34px;border-radius:10px;flex:0 0 auto;
+    background:conic-gradient(from 210deg,var(--c1),var(--c2),var(--c3),var(--c4),var(--c5),var(--c6),var(--c1));
+    display:grid;place-items:center;color:#fff;font-family:'Quicksand';font-weight:700;font-size:15px;
+    box-shadow:inset 0 0 0 3px rgba(255,255,255,.35);
+  }
+  .titles{min-width:0}
+  .titles h1{
+    font-family:'Quicksand',sans-serif;font-weight:700;font-size:15.5px;line-height:1.15;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .titles p{font-size:11.5px;color:#7C8794;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .toolbar{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .toolbar button{
+    font-family:'Nunito';font-weight:700;font-size:13px;color:var(--ink);
+    background:#fff;border:1.5px solid #E1DACA;border-radius:9px;
+    height:34px;min-width:34px;padding:0 10px;cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .toolbar button:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(38,50,63,.10)}
+  .toolbar button:focus-visible{outline:2.5px solid var(--c4);outline-offset:2px}
+  .zoom-label{font-size:12px;color:#7C8794;min-width:44px;text-align:center;font-weight:700}
+
+  /* ---------- Lienzo ---------- */
+  #viewport{position:fixed;inset:56px 0 0 0;cursor:grab;overflow:hidden;
+    background-image:radial-gradient(#E3DCCB 1.1px, transparent 1.1px);
+    background-size:26px 26px;
+  }
+  #viewport.dragging{cursor:grabbing}
+  #world{position:absolute;top:0;left:0;transform-origin:0 0}
+  #edges{position:absolute;top:0;left:0;overflow:visible}
+  #edges path{fill:none;stroke-linecap:round}
+
+  /* ---------- Nodos ---------- */
+  .node{
+    position:absolute;user-select:none;-webkit-user-select:none;
+    max-width:270px;line-height:1.32;
+  }
+  .node .box{cursor:pointer;position:relative;transition:transform .12s ease, box-shadow .12s ease}
+  .node .box:hover{transform:translateY(-1.5px)}
+
+  .node.lvl0 .box{
+    font-family:'Quicksand',sans-serif;font-weight:700;font-size:21px;letter-spacing:.3px;
+    color:#FFF;text-align:center;padding:20px 26px;border-radius:22px;
+    background:linear-gradient(150deg,#33414F,#1E2833);
+    box-shadow:0 10px 26px rgba(30,40,51,.35), inset 0 0 0 2.5px rgba(255,255,255,.14);
+  }
+  .node.lvl0{max-width:300px}
+  .node.lvl0 .sub{display:block;font-family:'Nunito';font-weight:600;font-size:12px;color:#C8D2DC;margin-top:6px;letter-spacing:.4px}
+
+  .node.lvl1 .box{
+    font-family:'Quicksand',sans-serif;font-weight:700;font-size:15.5px;color:#FFF;
+    padding:12px 18px;border-radius:16px;
+    background:var(--branch);
+    box-shadow:0 6px 16px color-mix(in srgb, var(--branch) 38%, transparent);
+  }
+  .node.lvl2 .box{
+    font-size:13.5px;font-weight:600;background:#FFF;color:var(--ink);
+    padding:9px 13px;border-radius:12px;border:2px solid var(--branch);
+    box-shadow:0 3px 8px rgba(38,50,63,.07);
+  }
+  .node.lvl3 .box{
+    font-size:12.5px;font-weight:600;color:#3A4653;padding:3px 2px 6px;
+    border-bottom:2.5px solid color-mix(in srgb, var(--branch) 55%, #fff);
+    border-radius:0;
+  }
+  .node.lvl3{max-width:240px}
+
+  /* Botón de colapso */
+  .pill{
+    position:absolute;top:50%;transform:translateY(-50%);
+    min-width:20px;height:20px;border-radius:999px;
+    background:var(--branch, #33414F);color:#fff;font-size:11px;font-weight:800;
+    display:grid;place-items:center;padding:0 5px;
+    box-shadow:0 2px 6px rgba(38,50,63,.25);pointer-events:none;
+  }
+  .pill.right{right:-26px}
+  .pill.left{left:-26px}
+
+  footer{
+    position:fixed;left:14px;bottom:12px;z-index:40;font-size:11px;color:#8A93A0;
+    background:rgba(251,249,243,.9);padding:6px 10px;border-radius:9px;border:1px solid #EAE4D6;max-width:min(92vw,640px)
+  }
+  .hint{
+    position:fixed;right:14px;bottom:12px;z-index:40;font-size:11.5px;color:#8A93A0;
+    background:rgba(251,249,243,.9);padding:6px 10px;border-radius:9px;border:1px solid #EAE4D6;
+  }
+  @media (max-width:640px){
+    .titles p{display:none}
+    .hint{display:none}
+    footer{font-size:10px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .node .box, .toolbar button{transition:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">M</div>
+  <div class="titles">
+    <h1>Pedagogía Crítica y del Diálogo · Mapa mental</h1>
+    <p>Actividad S9 A17 — elaborado a partir de los seis recursos de la unidad</p>
+  </div>
+  <div class="toolbar" role="toolbar" aria-label="Controles del mapa">
+    <button id="btn-out" title="Alejar" aria-label="Alejar">−</button>
+    <span class="zoom-label" id="zoom-label">100%</span>
+    <button id="btn-in" title="Acercar" aria-label="Acercar">+</button>
+    <button id="btn-fit" title="Ajustar a la pantalla">Ajustar</button>
+    <button id="btn-toggle" title="Expandir o contraer todo">Contraer</button>
+  </div>
+</header>
+
+<div id="viewport">
+  <div id="world">
+    <svg id="edges"></svg>
+    <div id="nodes"></div>
+  </div>
+</div>
+
+<footer>
+  Fuentes: Freire, <em>Pedagogía del diálogo</em> (Canal 22, 2017) · <em>Pedagogía crítica</em> (La crisis de la escuela, 2021) ·
+  <em>Principios del aprendizaje dialógico</em> (CIE, 2019) · <em>Tertulias Dialógicas</em> (Instituto Natura, 2016) ·
+  Prieto y Duque (2009).
+</footer>
+<div class="hint">Arrastra para mover · Rueda para acercar · Clic en un nodo para contraer su rama</div>
+
+<script>
+/* ================== DATOS DEL MAPA ================== */
+const DATA = {
+  text:"PEDAGOGÍA CRÍTICA Y DEL DIÁLOGO", sub:"Educar como práctica de la libertad",
+  children:[
+    { text:"Pedagogía Crítica", color:"var(--c1)", side:1, children:[
+      { text:"Fundamentos: la Teoría Crítica (Escuela de Frankfurt, inicios del s. XX)", children:[
+        { text:"Horkheimer (1937): no existe la neutralidad; toda teoría esconde ideología" },
+        { text:"El conocimiento depende de su contexto histórico, social y económico" },
+        { text:"Adorno: crítica a la industria cultural y al consumo que adormece" },
+        { text:"Habermas: el conocimiento es construcción; se aprende con la acción y la experiencia" }
+      ]},
+      { text:"Surge en los años 60: cuestiona la ideología detrás de la educación y problematiza el statu quo" },
+      { text:"Principios", children:[
+        { text:"Autoconciencia y construcción de significados desde la experiencia personal" },
+        { text:"Transformación social en beneficio de los más débiles" },
+        { text:"Compromiso con la justicia y la equidad ante las desigualdades" }
+      ]},
+      { text:"Representantes", children:[
+        { text:"Freire: Pedagogía del oprimido; diálogo y postura crítica" },
+        { text:"Giroux: el docente como intelectual transformador; la escuela como espacio de discusión" },
+        { text:"McLaren: une la vida cotidiana con las estructuras políticas y sociales" },
+        { text:"Biesta: educar para la emancipación y la democratización" }
+      ]},
+      { text:"Importancia: despertar conciencia social y disposición al cambio en el aula" }
+    ]},
+    { text:"Paulo Freire", color:"var(--c2)", side:1, children:[
+      { text:"Critica la educación bancaria: llenar mentes vacías y memorizar sin comprender" },
+      { text:"Educación popular en Brasil (años 60): se borra el límite entre enseñar y aprender" },
+      { text:"En quien se creía ignorante hay un saber que fundamenta su independencia" },
+      { text:"El conocimiento no es algo dado: es una construcción social e histórica" },
+      { text:"La educación como práctica de la libertad para transformar la realidad opresiva" },
+      { text:"«Enseñar exige saber escuchar»" }
+    ]},
+    { text:"Pedagogía del Diálogo", color:"var(--c3)", side:1, children:[
+      { text:"Enseñar sin diálogo es educar para la opresión" },
+      { text:"Educador y educando aprenden juntos: el diálogo también enseña y crea" },
+      { text:"La verdad une conocimiento reflexivo y acción práctica (praxis)" },
+      { text:"«En ese diálogo creamos el mundo y nos creamos a nosotros mismos»" }
+    ]},
+    { text:"Principios del aprendizaje dialógico (Flecha, 1997)", color:"var(--c4)", side:-1, children:[
+      { text:"1. Diálogo igualitario: valen los argumentos, no la jerarquía de quien habla" },
+      { text:"2. Inteligencia cultural: saber académico, práctico y comunicativo de todas las personas" },
+      { text:"3. Transformación: interacciones que cambian a las personas y sus contextos" },
+      { text:"4. Dimensión instrumental: aprendizajes esenciales para la inclusión social" },
+      { text:"5. Creación de sentido: respetar la individualidad mejora la confianza y el desempeño" },
+      { text:"6. Solidaridad: prácticas educativas democráticas, equilibradas y justas" },
+      { text:"7. Igualdad de diferencias: mismos derechos, trato con respeto y dignidad" }
+    ]},
+    { text:"Importancia del diálogo", color:"var(--c5)", side:-1, children:[
+      { text:"Todo conocimiento individual fue antes social: se aprende en la interacción (Vygotsky)" },
+      { text:"Transforma las interacciones de poder en interacciones dialógicas" },
+      { text:"Conecta la escuela con la vida cotidiana y crea sentido para el alumnado" },
+      { text:"Beneficios", children:[
+        { text:"Más aprendizaje instrumental y más solidaridad al mismo tiempo" },
+        { text:"Superación de desigualdades educativas y sociales" },
+        { text:"Resultados avalados por la investigación (proyecto INCLUD-ED)" }
+      ]}
+    ]},
+    { text:"Estrategias para una tertulia dialógica", color:"var(--c6)", side:-1, children:[
+      { text:"Encuentro para pensar juntos sobre las mejores creaciones de la humanidad" },
+      { text:"El grupo elige una obra clásica universal (por ejemplo, Don Quijote)" },
+      { text:"Lectura previa del capítulo acordado; cada participante elige un fragmento" },
+      { text:"Un moderador organiza los turnos de palabra (puede ser cualquier persona)" },
+      { text:"No hay verdades absolutas: cada aportación vale por sus argumentos" },
+      { text:"Beneficios", children:[
+        { text:"Amplía el vocabulario y la expresión oral y escrita" },
+        { text:"Mejora la comprensión lectora y el pensamiento crítico" },
+        { text:"Desarrolla la argumentación y rescata el placer de leer" }
+      ]}
+    ]}
+  ]
+};
+
+/* ================== CONSTRUCCIÓN ================== */
+const nodesEl = document.getElementById('nodes');
+const edgesEl = document.getElementById('edges');
+const world   = document.getElementById('world');
+const viewport= document.getElementById('viewport');
+
+const GAP_SIBLING = 16;   // separación vertical entre hermanos
+const GAP_BRANCH  = 42;   // separación vertical entre ramas principales
+const DX = [110, 60, 42]; // separación horizontal por nivel
+const PAD = 90;           // margen del lienzo
+
+let uid = 0;
+function prepare(node, level, side, color){
+  node.id = 'n' + (uid++);
+  node.level = level;
+  node.side = level === 0 ? 0 : side;
+  node.color = level === 0 ? null : color;
+  node.collapsed = false;
+  const el = document.createElement('div');
+  el.className = 'node lvl' + Math.min(level,3);
+  el.id = node.id;
+  if (node.color) el.style.setProperty('--branch', node.color);
+  const box = document.createElement('div');
+  box.className = 'box';
+  box.innerHTML = node.text + (node.sub ? '<span class="sub">'+node.sub+'</span>' : '');
+  box.setAttribute('role','button');
+  box.setAttribute('tabindex','0');
+  el.appendChild(box);
+  nodesEl.appendChild(el);
+  node.el = el; node.box = box;
+  (node.children || []).forEach(ch =>
+    prepare(ch, level+1, node.side || ch.side || side, node.color || ch.color));
+  if (node.children && node.children.length && level > 0){
+    const pill = document.createElement('div');
+    pill.className = 'pill';
+    pill.textContent = countLeaves(node);
+    el.appendChild(pill);
+    node.pill = pill;
+  }
+  box.addEventListener('click', e => { e.stopPropagation(); if(node.children && node.children.length && level>0){ node.collapsed = !node.collapsed; layout(); } });
+  box.addEventListener('keydown', e => { if((e.key==='Enter'||e.key===' ') && node.children && level>0){ e.preventDefault(); node.collapsed=!node.collapsed; layout(); } });
+}
+function countLeaves(n){ return (n.children||[]).length; }
+
+prepare(DATA, 0, 1, null);
+
+/* ================== DISTRIBUCIÓN ================== */
+function measure(n){
+  n.w = n.el.offsetWidth; n.h = n.el.offsetHeight;
+  (n.children||[]).forEach(measure);
+}
+function subH(n){
+  if (n.collapsed || !n.children || !n.children.length) return n.h;
+  const kids = n.children.reduce((s,c)=>s+subH(c),0) + GAP_SIBLING*(n.children.length-1);
+  return Math.max(n.h, kids);
+}
+function place(n, x, yCenter){
+  n.x = (n.side < 0) ? x - n.w : x;   // x = borde interno (hacia el centro)
+  n.y = yCenter - n.h/2;
+  n.el.style.left = n.x + 'px';
+  n.el.style.top  = n.y + 'px';
+  n.el.style.visibility = 'visible';
+  if (n.pill){
+    n.pill.style.display = n.collapsed ? 'grid' : 'none';
+    n.pill.className = 'pill ' + (n.side < 0 ? 'left' : 'right');
+  }
+  if (n.collapsed || !n.children) { hideDesc(n, false); return; }
+  const total = n.children.reduce((s,c)=>s+subH(c),0) + GAP_SIBLING*(n.children.length-1);
+  let cursor = yCenter - total/2;
+  const childX = (n.side < 0) ? n.x - DX[Math.min(n.level,2)] : n.x + n.w + DX[Math.min(n.level,2)];
+  n.children.forEach(c=>{
+    const h = subH(c);
+    place(c, childX, cursor + h/2);
+    cursor += h + GAP_SIBLING;
+  });
+}
+function hideDesc(n, self){
+  if (self){ n.el.style.visibility='hidden'; }
+  (n.children||[]).forEach(c=>hideDesc(c,true));
+}
+function layout(){
+  measure(DATA);
+  const right = DATA.children.filter(c=>c.side>0);
+  const left  = DATA.children.filter(c=>c.side<0);
+  const hSide = arr => arr.reduce((s,c)=>s+subH(c),0) + GAP_BRANCH*(arr.length-1);
+  const hR = hSide(right), hL = hSide(left);
+
+  // raíz en (0,0) provisional
+  place(DATA, -DATA.w/2, 0);
+  const stack = (arr, sideX) => {
+    let cursor = -hSide(arr)/2;
+    arr.forEach(b=>{
+      const h = subH(b);
+      place(b, sideX, cursor + h/2);
+      cursor += h + GAP_BRANCH;
+    });
+  };
+  stack(right,  DATA.w/2 + DX[0]);
+  stack(left,  -DATA.w/2 - DX[0]);
+
+  // normalizar coordenadas a positivas
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  eachVisible(DATA, n=>{
+    minX=Math.min(minX,n.x); minY=Math.min(minY,n.y);
+    maxX=Math.max(maxX,n.x+n.w); maxY=Math.max(maxY,n.y+n.h);
+  });
+  const ox = PAD - minX, oy = PAD - minY;
+  eachVisible(DATA, n=>{
+    n.x+=ox; n.y+=oy;
+    n.el.style.left=n.x+'px'; n.el.style.top=n.y+'px';
+  });
+  const W = (maxX-minX)+PAD*2, H=(maxY-minY)+PAD*2;
+  world.style.width=W+'px'; world.style.height=H+'px';
+  edgesEl.setAttribute('width',W); edgesEl.setAttribute('height',H);
+  drawEdges();
+  mapSize={w:W,h:H};
+}
+function eachVisible(n, fn){
+  fn(n);
+  if (!n.collapsed) (n.children||[]).forEach(c=>eachVisible(c,fn));
+}
+
+/* ================== CONECTORES ================== */
+function drawEdges(){
+  edgesEl.innerHTML='';
+  const draw = (p,c)=>{
+    const w = [5,3.2,2.2][Math.min(c.level-1,2)];
+    const col = c.color ? getComputedStyle(c.el).getPropertyValue('--branch') : '#33414F';
+    const px = c.side<0 ? p.x : p.x + p.w;
+    const py = p.y + p.h/2;
+    const cx = c.side<0 ? c.x + c.w : c.x;
+    const cy = c.y + c.h/2;
+    const k = Math.max(30, Math.abs(cx-px)*0.55) * (c.side<0?-1:1);
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M ${px} ${py} C ${px+k} ${py}, ${cx-k} ${cy}, ${cx} ${cy}`);
+    path.setAttribute('stroke', col.trim());
+    path.setAttribute('stroke-width', w);
+    path.setAttribute('opacity', c.level===1 ? .95 : .8);
+    edgesEl.appendChild(path);
+  };
+  const walk = n=>{
+    if(n.collapsed) return;
+    (n.children||[]).forEach(c=>{ draw(n,c); walk(c); });
+  };
+  walk(DATA);
+}
+
+/* ================== ZOOM Y DESPLAZAMIENTO ================== */
+let scale=1, tx=0, ty=0, mapSize={w:0,h:0};
+const zoomLabel=document.getElementById('zoom-label');
+function apply(){
+  world.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
+  zoomLabel.textContent=Math.round(scale*100)+'%';
+}
+function fit(){
+  const vw=viewport.clientWidth, vh=viewport.clientHeight;
+  scale=Math.min(vw/mapSize.w, vh/mapSize.h, 1.15)*0.96;
+  tx=(vw-mapSize.w*scale)/2; ty=(vh-mapSize.h*scale)/2;
+  apply();
+}
+function zoomAt(f, cx, cy){
+  const ns=Math.min(2.4, Math.max(.25, scale*f));
+  tx = cx - (cx-tx)*(ns/scale);
+  ty = cy - (cy-ty)*(ns/scale);
+  scale=ns; apply();
+}
+viewport.addEventListener('wheel', e=>{
+  e.preventDefault();
+  zoomAt(e.deltaY<0?1.12:0.89, e.clientX, e.clientY-56);
+},{passive:false});
+let drag=null;
+viewport.addEventListener('pointerdown', e=>{
+  drag={x:e.clientX,y:e.clientY,tx,ty};
+  viewport.classList.add('dragging');
+  viewport.setPointerCapture(e.pointerId);
+});
+viewport.addEventListener('pointermove', e=>{
+  if(!drag) return;
+  tx=drag.tx+(e.clientX-drag.x); ty=drag.ty+(e.clientY-drag.y); apply();
+});
+viewport.addEventListener('pointerup', ()=>{drag=null;viewport.classList.remove('dragging')});
+document.getElementById('btn-in').onclick =()=>zoomAt(1.2, viewport.clientWidth/2, viewport.clientHeight/2);
+document.getElementById('btn-out').onclick=()=>zoomAt(0.83, viewport.clientWidth/2, viewport.clientHeight/2);
+document.getElementById('btn-fit').onclick=fit;
+let allOpen=true;
+document.getElementById('btn-toggle').onclick=function(){
+  allOpen=!allOpen;
+  const set=n=>{ if(n.level>=1 && n.children && n.children.length) n.collapsed=!allOpen; (n.children||[]).forEach(set); };
+  DATA.children.forEach(set);
+  this.textContent=allOpen?'Contraer':'Expandir';
+  layout(); fit();
+};
+
+/* ================== INICIO ================== */
+function boot(){ layout(); fit(); }
+if (document.fonts && document.fonts.ready){ document.fonts.ready.then(()=>{ boot(); }); }
+window.addEventListener('load', boot);
+window.addEventListener('resize', ()=>{ layout(); fit(); });
+</script>
+</body>
+</html>
